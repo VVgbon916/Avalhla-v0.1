@@ -6,7 +6,7 @@ Install and run a local terminal AI assistant that remembers your profile, store
 System requirements:
 - Linux or Unix-like shell
 - Ollama installed
-- Local model available: codellama:7b
+- Local model available: qwen3.5:9b
 - Terminal access (VS Code Terminal or system terminal)
 
 1. Install Ollama
@@ -14,7 +14,7 @@ Follow the official Ollama installation instructions for your Linux distro.
 
 2. Pull the model
 In a terminal:
-ollama pull codellama:7b
+ollama pull qwen3.5:9b
 
 3. Create the bin directory and add it to PATH
 mkdir -p ~/bin
@@ -70,7 +70,7 @@ or:
 ava-start
 
 10. If the model is missing
-ollama pull codellama:7b
+ollama pull qwen3.5:9b
 
 11. If ai-with-memory is not found
 source ~/.bashrc

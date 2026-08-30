@@ -15,7 +15,7 @@ Avalhla is a terminal-based personal AI assistant that remembers your profile, s
 
 - Linux or Unix-like terminal
 - Ollama installed
-- Local model available: `codellama:7b`
+- Local model available: `qwen3.5:9b`
 
 ## Quick setup
 
@@ -23,7 +23,7 @@ Avalhla is a terminal-based personal AI assistant that remembers your profile, s
 mkdir -p ~/bin
 echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
 source ~/.bashrc
-ollama pull codellama:7b
+ollama pull qwen3.5:9b
 ```
 
 Start Ollama in one terminal, then in a second:

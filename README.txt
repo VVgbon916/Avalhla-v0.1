@@ -7,13 +7,13 @@ stores recent conversations, and keeps a local knowledge base for future session
 Requirements:
 - Linux or Unix-like terminal
 - Ollama installed
-- Local model: codellama:7b
+- Local model: qwen3.5:9b
 
 Quick setup:
 mkdir -p ~/bin
 echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
 source ~/.bashrc
-ollama pull codellama:7b
+ollama pull qwen3.5:9b
 
 Then run:
 cd "/home/VVgbon916/Documents/VS Code v0.1 AI-Integration/Avalhla v0.1"
@@ -28,7 +28,7 @@ ai-with-memory
 
 Reusable alias version:
 echo 'alias ava="source ~/.bashrc >/dev/null 2>&1; ai-with-memory"' >> ~/.bashrc
-echo 'alias ava-start="source ~/.bashrc >/dev/null 2>&1; ollama pull codellama:7b >/dev/null 2>&1 || true; ai-with-memory"' >> ~/.bashrc
+echo 'alias ava-start="source ~/.bashrc >/dev/null 2>&1; ollama pull qwen3.5:9b >/dev/null 2>&1 || true; ai-with-memory"' >> ~/.bashrc
 source ~/.bashrc
 
 Then use:
@@ -41,7 +41,7 @@ mkdir -p ~/bin
 cat > ~/bin/ava <<'EOF'
 #!/bin/bash
 source ~/.bashrc
-ollama pull codellama:7b >/dev/null 2>&1 || true
+ollama pull qwen3.5:9b >/dev/null 2>&1 || true
 ai-with-memory
 EOF
 chmod +x ~/bin/ava
@@ -71,7 +71,7 @@ If Ctrl+C stops the session:
 ava
 
 If Ollama model is missing:
-ollama pull codellama:7b
+ollama pull qwen3.5:9b
 
 Project folder:
 /home/VVgbon916/Documents/VS Code v0.1 AI-Integration/Avalhla v0.1

@@ -7,7 +7,7 @@ ollama serve
 source ~/.bashrc
 
 3) Make sure the model exists:
-ollama pull codellama:7b
+ollama pull qwen3.5:9b
 
 4) Start Avalhla:
 ava
@@ -50,7 +50,7 @@ echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
 source ~/.bashrc
 
 11) Final launch command:
-source ~/.bashrc && ollama pull codellama:7b >/dev/null 2>&1 || true && ai-with-memory
+source ~/.bashrc && ollama pull qwen3.5:9b >/dev/null 2>&1 || true && ai-with-memory
 
 SKILLS / USES
 - Terminal AI assistant

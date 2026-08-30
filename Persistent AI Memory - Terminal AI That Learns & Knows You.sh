@@ -76,7 +76,7 @@ Learning Goals: Learn AI, terminal development
 Coding Style: Minimalist, CLI-focused, no GUI
 
 # PREFERENCES
-Favorite Model: codellama:7b
+Favorite Model: qwen3.5:9b
 Response Style: Direct and concise
 Format Preference: Code first, explanation after
 Communication: Casual, friendly
@@ -149,7 +149,7 @@ echo "=== SETTING UP CONVERSATION LOGGING ==="
 cat > "$HOME/bin/ai-with-memory" << 'AIWITHMEMORY'
 #!/bin/bash
 
-MODEL="${1:-codellama:7b}"
+MODEL="${1:-qwen3.5:9b}"
 USER_PROFILE="$HOME/.ai-memory/profiles/user-profile.txt"
 SYSTEM_PROMPT="$HOME/.ai-memory/system-prompt.txt"
 MEMORY_DIR="$HOME/.ai-memory/conversations"
@@ -236,9 +236,9 @@ ensure_ollama() {
         sleep 3
     fi
 
-    if ! ollama list 2>/dev/null | grep -q "codellama:7b"; then
-        echo -e "${YELLOW}📥 Pulling codellama:7b model...${NC}" >&2
-        ollama pull codellama:7b >/tmp/ollama-pull.log 2>&1 || true
+    if ! ollama list 2>/dev/null | grep -q "qwen3.5:9b"; then
+        echo -e "${YELLOW}📥 Pulling qwen3.5:9b model...${NC}" >&2
+        ollama pull qwen3.5:9b >/tmp/ollama-pull.log 2>&1 || true
     fi
 }
 
@@ -393,7 +393,7 @@ cat > "$HOME/bin/ai-remember" << 'AIREMEMBER'
 #!/bin/bash
 
 MEMORY_DIR="$HOME/.ai-memory/conversations"
-MODEL="${1:-codellama:7b}"
+MODEL="${1:-qwen3.5:9b}"
 
 echo "🧠 AI is reviewing its memory of you..."
 echo ""

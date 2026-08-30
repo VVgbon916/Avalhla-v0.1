@@ -67,4 +67,4 @@ Assistant: Saved this message history into the file named `Avalhla_Chat_History_
 Notes:
 - The final working pattern is: run `ollama serve` in one terminal, then launch `ava` in another terminal.
 - The terminal, not VS Code editor, is the required runtime environment.
-- Avalhla is configured to use local memory in `~/.ai-memory` and the model `codellama:7b` via Ollama.
+- Avalhla is configured to use local memory in `~/.ai-memory` and the model `qwen3.5:9b` via Ollama.
