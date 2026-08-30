@@ -1,0 +1,96 @@
+Avalhla v0.1 - Setup Notes
+
+Goal:
+Install and run a local terminal AI assistant that remembers your profile, stores conversation history, and indexes local project files.
+
+System requirements:
+- Linux or Unix-like shell
+- Ollama installed
+- Local model available: codellama:7b
+- Terminal access (VS Code Terminal or system terminal)
+
+1. Install Ollama
+Follow the official Ollama installation instructions for your Linux distro.
+
+2. Pull the model
+In a terminal:
+ollama pull codellama:7b
+
+3. Create the bin directory and add it to PATH
+mkdir -p ~/bin
+echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+4. Run the setup script
+cd "/home/VVgbon916/Documents/VS Code v0.1 AI-Integration/Avalhla v0.1"
+bash "Persistent AI Memory - Terminal AI That Learns & Knows You.sh"
+
+5. Start Ollama service
+In one terminal:
+ollama serve
+
+6. Start Avalhla
+In a second terminal:
+source ~/.bashrc
+ava
+
+Or:
+source ~/.bashrc
+ai-with-memory
+
+Or:
+ava-launch
+
+7. Useful commands
+ai-with-memory
+ai-progress
+ai-remember
+ai-init
+ai-learn
+
+8. Memory folder
+All personal memory is stored locally here:
+~/.ai-memory
+
+Important subfolders:
+~/.ai-memory/conversations
+~/.ai-memory/profiles
+~/.ai-memory/knowledge-base
+~/.ai-memory/preferences
+
+9. Final startup shortcut
+Install this alias:
+echo 'alias ava="source ~/.bashrc >/dev/null 2>&1; ai-with-memory"' >> ~/.bashrc
+echo 'alias ava-start="source ~/.bashrc >/dev/null 2>&1; ava-launch"' >> ~/.bashrc
+source ~/.bashrc
+
+Then use:
+ava
+or:
+ava-start
+
+10. If the model is missing
+ollama pull codellama:7b
+
+11. If ai-with-memory is not found
+source ~/.bashrc
+hash -r
+
+12. If Ctrl+C stops Ava
+Just start it again:
+ava
+
+13. If you want to reset the personal AI memory
+Delete or rename:
+~/.ai-memory
+
+14. Project files to keep
+Keep these in the project folder:
+- Persistent AI Memory - Terminal AI That Learns & Knows You.sh
+- README.md
+- README.txt
+- QUICKSTART_AVA.txt
+- SETUP_NOTES.txt
+- Avalhla_Chat_History_2026-08-24.txt
+
+Do not treat ~/.ai-memory as project source code. It is local runtime memory.

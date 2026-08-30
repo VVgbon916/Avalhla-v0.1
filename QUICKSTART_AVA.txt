@@ -1,0 +1,66 @@
+AVA QUICKSTART
+
+1) Start the Ollama service in one terminal:
+ollama serve
+
+2) Open a second terminal and load your shell config:
+source ~/.bashrc
+
+3) Make sure the model exists:
+ollama pull codellama:7b
+
+4) Start Avalhla:
+ava
+
+If the alias is not available yet, run:
+source ~/.bashrc
+hash -r
+ava
+
+4) If you want to start it with the setup check included:
+ava-start
+
+5) If you want to run the full setup script again:
+cd "/home/VVgbon916/Documents/VS Code v0.1 AI-Integration/Avalhla v0.1"
+bash "Persistent AI Memory - Terminal AI That Learns & Knows You.sh"
+
+6) After setup, use these commands:
+ai-with-memory
+ai-progress
+ai-remember
+ai-init
+ai-learn
+
+7) Memory locations:
+~/.ai-memory/conversations
+~/.ai-memory/profiles
+~/.ai-memory/knowledge-base
+~/.ai-memory/preferences
+
+8) If Ctrl+C stops Ava:
+ava
+
+9) If ai-with-memory is not found:
+source ~/.bashrc
+hash -r
+
+10) If you want to recover from a broken PATH:
+mkdir -p ~/bin
+echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+11) Final launch command:
+source ~/.bashrc && ollama pull codellama:7b >/dev/null 2>&1 || true && ai-with-memory
+
+SKILLS / USES
+- Terminal AI assistant
+- Persistent memory and conversation logging
+- Local custom profile system
+- Knowledge base indexing for project files
+- Friendly, personal assistant experience
+- Good for coding help, terminal workflows, and long-term learning
+
+NOTES
+- Avalhla is designed for terminal-first interaction.
+- Memory is stored locally on your machine.
+- The assistant learns from your chats and project files over time.
