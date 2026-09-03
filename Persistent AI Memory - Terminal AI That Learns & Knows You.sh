@@ -2,8 +2,7 @@
 ################################################################################
 set -euo pipefail
 IFS=$'\n\t'
-# Resolve script directory (works when sourced or executed)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-${0}}")" >/dev/null 2>&1 && pwd)"
+# Strict mode enabled (set -euo pipefail)"
 # CHEATSHEET: Persistent AI Memory - Terminal AI That Learns & Knows You
 # Create a personal AI assistant that remembers conversations and learns over time
 # Your AI recognizes you instantly and builds knowledge about YOUR preferences
@@ -46,12 +45,14 @@ echo "=== SETUP MEMORY SYSTEM ==="
 
 mkdir -p "$HOME/bin"
 # Persist PATH for login shells and apply in interactive shells only
+# shellcheck disable=SC2016
 if ! grep -q 'export PATH="$HOME/bin:$PATH"' "$HOME/.profile" 2>/dev/null; then
-    echo 'export PATH="$HOME/bin:$PATH"' >> "$HOME/.profile"
+    # shellcheck disable=SC2016
+    printf '%s\n' 'export PATH="$HOME/bin:$PATH"' >> "$HOME/.profile"
 fi
 # Source .bashrc only in interactive shells
 if [[ $- == *i* ]] && [ -f "$HOME/.bashrc" ]; then
-    # shellcheck disable=SC1090
+    # shellcheck disable=SC1090,SC1091
     source "$HOME/.bashrc" 2>/dev/null || true
 fi
 export PATH="$HOME/bin:$PATH"
@@ -295,7 +296,16 @@ ensure_ollama() {
     fi
 
     # Trap to clean up server started by this script (reads PID from file)
-    trap 'if [ -f "'"$PID_FILE"'" ]; then _p=$(cat "'"$PID_FILE"'" 2>/dev/null || true; if [ -n "$_p" ] && kill -0 "$_p" >/dev/null 2>&1; then kill "$_p" || true; fi; rm -f "'"$PID_FILE"'"; fi' EXIT
+    cleanup_ollama() {
+        if [ -f "$PID_FILE" ]; then
+            _p=$(cat "$PID_FILE" 2>/dev/null || true)
+            if [ -n "$_p" ] && kill -0 "$_p" >/dev/null 2>&1; then
+                kill "$_p" || true
+            fi
+            rm -f "$PID_FILE" || true
+        fi
+    }
+    trap cleanup_ollama EXIT
 }
 
 run_model() {
