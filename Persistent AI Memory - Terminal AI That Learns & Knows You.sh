@@ -253,26 +253,49 @@ ensure_ollama() {
         exit 1
     fi
 
-    # Prepare log dir for service logs
     LOG_DIR="$HOME/.ai-memory/var"
     mkdir -p "$LOG_DIR"
+    PID_FILE="$LOG_DIR/ollama-ava.pid"
 
-    # If ollama not running, attempt to start it and capture PID
-    if ! pgrep -x ollama >/dev/null 2>&1; then
+    # Function to check if Ollama server responds to 'ollama list'
+    ollama_responding() {
+        if ollama list >/dev/null 2>&1; then
+            return 0
+        fi
+        return 1
+    }
+
+    # If server not responding, try start with retries
+    if ! ollama_responding; then
         printf '%b\n' "${YELLOW}🔄 Starting local Ollama service...${NC}" >&2
         setsid ollama serve >"$LOG_DIR/ollama-ava.log" 2>&1 &
-        local _pid=$!
-        echo "$_pid" > "$LOG_DIR/ollama-ava.pid" || true
-        # Clean up on exit
-        trap 'if [ -n "$_pid" ] && kill -0 "$_pid" >/dev/null 2>&1; then kill "$_pid" || true; fi' EXIT
-        sleep 3
+        echo "$!" > "$PID_FILE" || true
+
+        # Wait for server to become responsive with backoff
+        local tries=0
+        local max_tries=8
+        local delay=1
+        while ! ollama_responding && [ "$tries" -lt "$max_tries" ]; do
+            sleep "$delay"
+            tries=$((tries + 1))
+            delay=$((delay * 2))
+        done
+
+        if ! ollama_responding; then
+            printf '%b\n' "${YELLOW}⚠️ Ollama did not start after retries; continuing but commands may fail.${NC}" >&2
+        fi
     fi
 
-    # Ensure model is available; pull if missing
+    # Ensure model is available; pull if missing (with a short retry)
     if ! ollama list 2>/dev/null | grep -q "qwen3.5:9b"; then
         printf '%b\n' "${YELLOW}📥 Pulling qwen3.5:9b model...${NC}" >&2
-        ollama pull qwen3.5:9b >"$LOG_DIR/ollama-pull.log" 2>&1 || true
+        for _ in 1 2 3; do
+            ollama pull qwen3.5:9b >"$LOG_DIR/ollama-pull.log" 2>&1 && break || sleep 2
+        done
     fi
+
+    # Trap to clean up server started by this script (reads PID from file)
+    trap 'if [ -f "'"$PID_FILE"'" ]; then _p=$(cat "'"$PID_FILE"'" 2>/dev/null || true; if [ -n "$_p" ] && kill -0 "$_p" >/dev/null 2>&1; then kill "$_p" || true; fi; rm -f "'"$PID_FILE"'"; fi' EXIT
 }
 
 run_model() {
@@ -463,20 +486,23 @@ echo ""
 
 memory_text=$(
     echo "=== USER PROFILE ==="
-    cat "$HOME/.ai-memory/profiles/user-profile.txt" 2>/dev/null
+    cat "$HOME/.ai-memory/profiles/user-profile.txt" 2>/dev/null || true
     echo ""
     echo "=== RECENT CONVERSATIONS ==="
-    find "$MEMORY_DIR" -name "*.jsonl" -exec grep -h '"user"' {} \; 2>/dev/null | tail -20
+    find "$MEMORY_DIR" -name "*.jsonl" -exec grep -h '"user"' {} \; 2>/dev/null | tail -20 || true
 )
 
-prompt="Based on this conversation history with your user, what have you learned about them?
-$memory_text
+prompt_text="Based on this conversation history with your user, what have you learned about them?\n$memory_text\n\nProvide a concise summary."
 
-Provide a concise summary."
+# Use a prompt file to avoid quoting issues
+prompt_file=$(mktemp)
+printf '%s' "$prompt_text" > "$prompt_file"
 
 echo "AI's understanding of you:"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-ollama run "$MODEL" "$prompt" 2>/dev/null
+# Try running with prompt file first, fallback to inline
+ollama run "$MODEL" "$prompt_file" 2>/dev/null || ollama run "$MODEL" "$(cat "$prompt_file")" 2>/dev/null || true
+rm -f "$prompt_file" || true
 AIREMEMBER
 
 chmod +x "$HOME/bin/ai-remember"
