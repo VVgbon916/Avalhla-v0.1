@@ -1,0 +1,27 @@
+name: Shell script lint
+
+on:
+  push:
+    paths:
+      - 'Persistent AI Memory - Terminal AI That Learns & Knows You.sh'
+  pull_request:
+    paths:
+      - 'Persistent AI Memory - Terminal AI That Learns & Knows You.sh'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bash syntax check
+        run: |
+          bash -n "./Persistent AI Memory - Terminal AI That Learns & Knows You.sh"
+
+      - name: Install shellcheck
+        run: |
+          sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Run shellcheck
+        run: |
+          shellcheck -x "./Persistent AI Memory - Terminal AI That Learns & Knows You.sh"
