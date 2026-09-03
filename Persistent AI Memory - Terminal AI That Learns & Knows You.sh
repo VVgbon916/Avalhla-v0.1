@@ -138,6 +138,20 @@ Current style: Practical, concise, focused, and respectful of time
 - Debug errors and help troubleshoot issues
 - Teach best practices in a way that matches the user's skill level
 - Help the user make decisions with confidence and clarity
+- Research topics online when asked (use provided web data)
+- Reference the user's files, bash history, and system information
+- Help with the user's Avalhla-v0.1 project (GitHub: VVgbon916/Avalhla-v0.1)
+
+=== CAPABILITIES ===
+- Access to user's knowledge base: code files, documents, and projects
+- Access to Avalhla-v0.1 project (both local folders and GitHub repository)
+- Access to bash history and CLI commands
+- System information: OS, installed tools, environment
+- Can research online topics (web data will be provided)
+- Can suggest terminal-based solutions
+- Can reference GitHub repo: https://github.com/VVgbon916/Avalhla-v0.1
+- Can help with GitHub issues, PRs, and code reviews
+- Can access Avalhla project structure and documentation
 
 === BEHAVIOR ===
 - Prefer code-first explanations
@@ -146,6 +160,7 @@ Current style: Practical, concise, focused, and respectful of time
 - Treat the user as a collaborator, not a beginner needing lectures
 - If unsure, ask for clarification instead of guessing
 - Be a trusted advisor and dependable partner in their work
+- When asked to research, use provided web information or suggest curl/wget commands
 
 You are called Avalhla, and you may also be referred to as "Ava".
 EOF
@@ -168,7 +183,26 @@ CURRENT_LOG="$MEMORY_DIR/$(date +%Y-%m-%d).jsonl"
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m'
+
+# Function to fetch web content (research)
+fetch_web_content() {
+    local query="$1"
+    local max_attempts=2
+    local attempt=0
+    
+    while [ $attempt -lt $max_attempts ]; do
+        if command -v curl >/dev/null 2>&1; then
+            curl -s --max-time 5 "https://duckduckgo.com/?q=$(printf '%s' "$query" | sed 's/ /+/g')" 2>/dev/null | grep -o -E '<a[^>]*>.*?</a>' | head -5 && return 0
+        elif command -v wget >/dev/null 2>&1; then
+            wget -q -O - --timeout=5 "https://duckduckgo.com/?q=$(printf '%s' "$query" | sed 's/ /+/g')" 2>/dev/null | grep -o -E '<a[^>]*>.*?</a>' | head -5 && return 0
+        fi
+        attempt=$((attempt + 1))
+        sleep 1
+    done
+    return 1
+}
 
 load_greeting() {
     local name
@@ -190,7 +224,7 @@ load_greeting() {
         fi
     fi
 
-    echo -e "${YELLOW}Type 'exit' to quit, 'help' for commands${NC}"
+    echo -e "${YELLOW}Type 'exit' to quit, 'help' for commands, or 'research <topic>' to search online${NC}"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 }
 
@@ -229,17 +263,46 @@ load_context() {
 
 build_full_prompt() {
     local user_input="$1"
-    local system profile context
+    local system profile context bash_history system_info kb_snippets
 
     system=$(cat "$SYSTEM_PROMPT" 2>/dev/null)
     profile=$(cat "$USER_PROFILE" 2>/dev/null)
     context=$(load_context)
+    
+    # Load recent bash history
+    bash_history=""
+    if [ -f "$HOME/.bash_history" ]; then
+        bash_history=$(tail -20 "$HOME/.bash_history" 2>/dev/null | sed 's/^/  /')
+    fi
+    
+    # Load system info
+    system_info=""
+    if [ -f "$HOME/.ai-memory/knowledge-base/system-info.txt" ]; then
+        system_info=$(head -20 "$HOME/.ai-memory/knowledge-base/system-info.txt" 2>/dev/null)
+    fi
+    
+    # Load relevant knowledge base snippets
+    kb_snippets=""
+    if [ -d "$HOME/.ai-memory/knowledge-base" ]; then
+        kb_count=$(find "$HOME/.ai-memory/knowledge-base" -type f | wc -l 2>/dev/null || echo 0)
+        kb_size=$(du -sh "$HOME/.ai-memory/knowledge-base" 2>/dev/null | cut -f1 || echo "0")
+        kb_snippets="[User has $kb_count files indexed in knowledge base (${kb_size})]"
+    fi
 
     printf '%s\n' "System Instructions:
 $system
 
 User Profile:
 $profile
+
+System Information:
+$system_info
+
+Recent Bash History:
+$bash_history
+
+Knowledge Base:
+$kb_snippets
 
 Recent Conversation Context:
 $context
@@ -310,9 +373,10 @@ ensure_ollama() {
 
 run_model() {
     local user_input="$1"
+    local web_context="${2:-}"
     local full_prompt response
 
-    full_prompt=$(build_full_prompt "$user_input")
+    full_prompt=$(build_full_prompt "$user_input" "$web_context")
     # Use temporary file for prompt to avoid shell escaping issues
     local prompt_file
     prompt_file=$(mktemp)
@@ -341,10 +405,13 @@ while true; do
             ;;
         "help")
             echo "Commands:"
-            echo "  exit       - Quit"
-            echo "  help       - Show this help"
-            echo "  history    - View recent history"
-            echo "  memory     - Show memory stats"
+            echo "  exit              - Quit"
+            echo "  help              - Show this help"
+            echo "  history           - View recent history"
+            echo "  memory            - Show memory stats"
+            echo "  research <topic>  - Search online for a topic"
+            echo "  github            - Sync GitHub repo info (Avalhla-v0.1)"
+            echo "  clear             - Clear screen"
             continue
             ;;
         "clear")
@@ -366,7 +433,56 @@ while true; do
             echo "Knowledge base: $(du -sh "$HOME/.ai-memory/knowledge-base" 2>/dev/null | cut -f1)"
             continue
             ;;
-    esac
+        research*)
+            # Handle "research <topic>" command
+            topic="${prompt#research }"
+            topic="${topic# }"  # Remove leading spaces
+            
+            if [ -z "$topic" ]; then
+                echo -e "${RED}Please provide a topic to research. Example: research bash loops${NC}"
+                continue
+            fi
+            
+            echo -e "${YELLOW}🔍 Searching online for: $topic${NC}"
+            web_context=$(fetch_web_content "$topic" || echo "No internet connection available. Provide my best knowledge instead.")
+            
+            if [ -n "$web_context" ]; then
+                echo -e "${YELLOW}📚 Found web results. Analyzing...${NC}"
+            fi
+            
+            # Ask AI to research the topic with web context
+            response=$(run_model "Research this topic: $topic" "$web_context")
+            
+            if [[ -z "${response//[[:space:]]/}" ]]; then
+                echo -e "${YELLOW}⚠️ AI returned no results. Try again.${NC}"
+                echo ""
+                continue
+            fi
+            
+            echo -e "${GREEN}AI (Research):${NC} $response"
+            echo ""
+            
+            save_conversation "research: $topic" "$response"
+            continue
+            ;;
+        "github")
+            echo -e "${YELLOW}🌐 Syncing GitHub repo: VVgbon916/Avalhla-v0.1${NC}"
+            if command -v "$HOME/bin/ai-github-sync" >/dev/null 2>&1; then
+                "$HOME/bin/ai-github-sync"
+            else
+                echo -e "${RED}ai-github-sync not found. Please initialize the AI first.${NC}"
+            fi
+            
+            # After syncing, provide summary
+            echo ""
+            echo -e "${GREEN}✓ GitHub sync complete! Ask me about:${NC}"
+            echo "  • Avalhla-v0.1 project structure"
+            echo "  • Recent commits and changes"
+            echo "  • Open issues or pull requests"
+            echo "  • Project README and documentation"
+            continue
+            ;;
+     esac
 
     [ -z "$prompt" ] && continue
 
@@ -402,44 +518,195 @@ cat > "$HOME/bin/ai-learn" << 'AILEARN'
 KB_DIR="$HOME/.ai-memory/knowledge-base"
 PROJECT_PATH="${1:-.}"
 
-echo "📚 Indexing your code..."
-echo "Source: $PROJECT_PATH"
+echo "📚 Indexing your code, documents, and system info..."
 echo ""
 
-cd "$PROJECT_PATH" 2>/dev/null || { echo "Invalid project path: $PROJECT_PATH"; exit 1; }
 mkdir -p "$KB_DIR"
-find . \
-    -type f \
-    \( -name "*.py" -o -name "*.js" -o -name "*.sh" -o -name "*.txt" -o -name "*.md" \) \
-    ! -path "./node_modules/*" \
-    ! -path "./.git/*" \
-    ! -path "./__pycache__/*" \
-    -exec cp --parents {} "$KB_DIR/" \; 2>/dev/null || {
-    # cp --parents not available on all platforms; try rsync -aR
-    if command -v rsync >/dev/null 2>&1; then
-        find . -type f \( -name "*.py" -o -name "*.js" -o -name "*.sh" -o -name "*.txt" -o -name "*.md" \) \
-            ! -path "./node_modules/*" ! -path "./.git/*" ! -path "./__pycache__/*" -print0 | \
-            rsync -0 -aR --files-from=- ./ "$KB_DIR/"
-    else
-        # Fallback: copy preserving relative path
-        find . -type f \( -name "*.py" -o -name "*.js" -o -name "*.sh" -o -name "*.txt" -o -name "*.md" \) \
-            ! -path "./node_modules/*" ! -path "./.git/*" ! -path "./__pycache__/*" -print0 | \
-            while IFS= read -r -d '' f; do
-                dest="$KB_DIR/${f#./}"
-                mkdir -p "$(dirname "$dest")"
-                cp "$f" "$dest" || true
-            done
-    fi
-}
 
-# Count files safely
+# Index custom project path if provided
+if [ -n "$PROJECT_PATH" ] && [ "$PROJECT_PATH" != "." ]; then
+    echo "📂 Indexing project: $PROJECT_PATH"
+    cd "$PROJECT_PATH" 2>/dev/null || { echo "⚠️ Invalid project path: $PROJECT_PATH"; }
+fi
+
+# Index Downloads folder
+if [ -d "$HOME/Downloads" ]; then
+    echo "📂 Indexing Downloads..."
+    find "$HOME/Downloads" -type f \( -name "*.py" -o -name "*.js" -o -name "*.sh" -o -name "*.txt" -o -name "*.md" -o -name "*.json" -o -name "*.yaml" -o -name "*.yml" \) ! -path "*/\.*" 2>/dev/null | while read -r f; do
+        rel_path="${f#$HOME/}"
+        dest="$KB_DIR/$rel_path"
+        mkdir -p "$(dirname "$dest")"
+        cp "$f" "$dest" 2>/dev/null || true
+    done
+fi
+
+# Index Documents folder
+if [ -d "$HOME/Documents" ]; then
+    echo "📂 Indexing Documents..."
+    find "$HOME/Documents" -type f \( -name "*.py" -o -name "*.js" -o -name "*.sh" -o -name "*.txt" -o -name "*.md" -o -name "*.json" \) ! -path "*/\.*" 2>/dev/null | while read -r f; do
+        rel_path="${f#$HOME/}"
+        dest="$KB_DIR/$rel_path"
+        mkdir -p "$(dirname "$dest")"
+        cp "$f" "$dest" 2>/dev/null || true
+    done
+fi
+
+# Index Avalhla project folder
+if [ -d "$HOME/Avalhla-v0.1" ]; then
+    echo "📂 Indexing Avalhla-v0.1 (local)..."
+    find "$HOME/Avalhla-v0.1" -type f \( -name "*.py" -o -name "*.js" -o -name "*.sh" -o -name "*.txt" -o -name "*.md" \) ! -path "./node_modules/*" ! -path "./.git/*" ! -path "./__pycache__/*" 2>/dev/null | while read -r f; do
+        rel_path="${f#$HOME/}"
+        dest="$KB_DIR/$rel_path"
+        mkdir -p "$(dirname "$dest")"
+        cp "$f" "$dest" 2>/dev/null || true
+    done
+fi
+
+# Index GitHub repo (VVgbon916/Avalhla-v0.1)
+echo "🌐 Fetching GitHub repository info (VVgbon916/Avalhla-v0.1)..."
+GITHUB_REPO_DIR="$KB_DIR/github-avalhla-v0.1"
+mkdir -p "$GITHUB_REPO_DIR"
+
+# Fetch README
+if command -v curl >/dev/null 2>&1; then
+    echo "📄 Fetching README..."
+    curl -s "https://raw.githubusercontent.com/VVgbon916/Avalhla-v0.1/main/README.md" > "$GITHUB_REPO_DIR/README.md" 2>/dev/null || true
+    
+    # Fetch repo info
+    echo "📋 Fetching repository metadata..."
+    curl -s "https://api.github.com/repos/VVgbon916/Avalhla-v0.1" > "$GITHUB_REPO_DIR/repo-info.json" 2>/dev/null || true
+fi
+
+# If the repo exists locally with .git, fetch latest info
+if [ -d "$HOME/Avalhla-v0.1/.git" ]; then
+    echo "📝 Extracting git history..."
+    (
+        cd "$HOME/Avalhla-v0.1" 2>/dev/null || exit
+        git log --oneline -20 > "$GITHUB_REPO_DIR/recent-commits.txt" 2>/dev/null || true
+        git remote -v > "$GITHUB_REPO_DIR/git-remotes.txt" 2>/dev/null || true
+    ) || true
+fi
+
+# Index bash history
+echo "📜 Indexing bash history..."
+if [ -f "$HOME/.bash_history" ]; then
+    cp "$HOME/.bash_history" "$KB_DIR/bash_history.txt" 2>/dev/null || true
+fi
+
+# Get system info and store it
+echo "🖥️  Capturing system info..."
+{
+    echo "=== SYSTEM INFORMATION ==="
+    echo "Hostname: $(hostname)"
+    uname -a 2>/dev/null || true
+    echo ""
+    echo "=== USER INFO ==="
+    id
+    echo ""
+    echo "=== DISK USAGE ==="
+    df -h 2>/dev/null | head -5
+    echo ""
+    echo "=== AVAILABLE COMMANDS ==="
+    compgen -c 2>/dev/null | sort -u | head -50
+} > "$KB_DIR/system-info.txt" 2>/dev/null || true
+
 files_count=$(find "$KB_DIR" -type f 2>/dev/null | wc -l || echo 0)
+echo ""
 echo "✓ Files indexed: $files_count"
-echo "✓ AI will reference your code from now on!"
+echo "✓ AI will reference your code, documents, and system from now on!"
 AILEARN
 
 chmod +x "$HOME/bin/ai-learn"
 echo "✓ ai-learn command created"
+
+################################################################################
+# SECTION 5B: GITHUB SYNC - KEEP REPO INFO UP TO DATE
+################################################################################
+
+echo "=== SETTING UP GITHUB SYNC ==="
+
+cat > "$HOME/bin/ai-github-sync" << 'AIGITHUBSYNC'
+#!/bin/bash
+
+KB_DIR="$HOME/.ai-memory/knowledge-base"
+GITHUB_REPO_DIR="$KB_DIR/github-avalhla-v0.1"
+REPO_OWNER="VVgbon916"
+REPO_NAME="Avalhla-v0.1"
+
+echo "🌐 Syncing GitHub repository: $REPO_OWNER/$REPO_NAME"
+echo ""
+
+mkdir -p "$GITHUB_REPO_DIR"
+
+# Fetch README from main branch
+echo "📄 Fetching README.md..."
+if command -v curl >/dev/null 2>&1; then
+    curl -s "https://raw.githubusercontent.com/$REPO_OWNER/$REPO_NAME/main/README.md" \
+        -o "$GITHUB_REPO_DIR/README.md" 2>/dev/null && echo "✓ README.md" || echo "⚠️ Could not fetch README"
+fi
+
+# Fetch repository metadata (stats, description, etc.)
+echo "📋 Fetching repository metadata..."
+if command -v curl >/dev/null 2>&1; then
+    curl -s "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME" \
+        -o "$GITHUB_REPO_DIR/repo-metadata.json" 2>/dev/null && echo "✓ Repo metadata" || echo "⚠️ Could not fetch metadata"
+fi
+
+# Fetch recent commits
+echo "📝 Fetching recent commits..."
+if command -v curl >/dev/null 2>&1; then
+    curl -s "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/commits?per_page=20" \
+        -o "$GITHUB_REPO_DIR/recent-commits.json" 2>/dev/null && echo "✓ Commit history" || echo "⚠️ Could not fetch commits"
+fi
+
+# Fetch open issues
+echo "🐛 Fetching open issues..."
+if command -v curl >/dev/null 2>&1; then
+    curl -s "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/issues?state=open" \
+        -o "$GITHUB_REPO_DIR/open-issues.json" 2>/dev/null && echo "✓ Open issues" || echo "⚠️ Could not fetch issues"
+fi
+
+# Fetch open pull requests
+echo "📢 Fetching pull requests..."
+if command -v curl >/dev/null 2>&1; then
+    curl -s "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/pulls?state=open" \
+        -o "$GITHUB_REPO_DIR/open-prs.json" 2>/dev/null && echo "✓ Open PRs" || echo "⚠️ Could not fetch PRs"
+fi
+
+# If local repo exists, extract git info
+if [ -d "$HOME/Avalhla-v0.1/.git" ]; then
+    echo "📂 Extracting local git information..."
+    (
+        cd "$HOME/Avalhla-v0.1" 2>/dev/null || exit
+        
+        # Recent commits
+        git log --oneline -30 --decorate > "$GITHUB_REPO_DIR/git-log.txt" 2>/dev/null || true
+        
+        # Remote info
+        git remote -v > "$GITHUB_REPO_DIR/git-remotes.txt" 2>/dev/null || true
+        
+        # Branches
+        git branch -a > "$GITHUB_REPO_DIR/git-branches.txt" 2>/dev/null || true
+        
+        # Current status
+        git status > "$GITHUB_REPO_DIR/git-status.txt" 2>/dev/null || true
+    ) || true
+    
+    echo "✓ Local git info extracted"
+fi
+
+echo ""
+echo "✓ GitHub repo synced! AI has access to:"
+echo "  • Repository README and documentation"
+echo "  • Recent commits and history"
+echo "  • Open issues and pull requests"
+echo "  • Local git information"
+echo ""
+echo "Run 'ai-github-sync' anytime to refresh this data."
+AIGITHUBSYNC
+
+chmod +x "$HOME/bin/ai-github-sync"
+echo "✓ ai-github-sync command created"
 
 ################################################################################
 # SECTION 6: PROGRESS TRACKER
