@@ -190,9 +190,16 @@ save_conversation() {
     local timestamp
     timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-    cat >> "$CURRENT_LOG" << JSONLOG
-{"timestamp":"$timestamp","user":"$user_msg","ai":"$ai_response","model":"$MODEL","learned":false}
-JSONLOG
+    # Escape JSON safely (use python3 if available, otherwise fallback to simple escapes)
+    if command -v python3 >/dev/null 2>&1; then
+        esc_user_msg=$(printf '%s' "$user_msg" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read())[1:-1])')
+        esc_ai_response=$(printf '%s' "$ai_response" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read())[1:-1])')
+    else
+        esc_user_msg=$(printf '%s' "$user_msg" | sed -e 's/\\/\\\\/g' -e 's/"/\\\"/g' -e ':a;N;$!ba;s/\n/\\n/g')
+        esc_ai_response=$(printf '%s' "$ai_response" | sed -e 's/\\/\\\\/g' -e 's/"/\\\"/g' -e ':a;N;$!ba;s/\n/\\n/g')
+    fi
+
+    printf '%s\n' "{\"timestamp\":\"$timestamp\",\"user\":\"$esc_user_msg\",\"ai\":\"$esc_ai_response\",\"model\":\"$MODEL\",\"learned\":false}" >> "$CURRENT_LOG"
 }
 
 load_context() {
@@ -335,13 +342,15 @@ echo "📚 Indexing your code..."
 echo "Source: $PROJECT_PATH"
 echo ""
 
-find "$PROJECT_PATH" \
+cd "$PROJECT_PATH" 2>/dev/null || { echo "Invalid project path: $PROJECT_PATH"; exit 1; }
+mkdir -p "$KB_DIR"
+find . \
     -type f \
     \( -name "*.py" -o -name "*.js" -o -name "*.sh" -o -name "*.txt" -o -name "*.md" \) \
-    ! -path "*/node_modules/*" \
-    ! -path "*/.git/*" \
-    ! -path "*/__pycache__/*" \
-    -exec cp {} "$KB_DIR/" \; 2>/dev/null
+    ! -path "./node_modules/*" \
+    ! -path "./.git/*" \
+    ! -path "./__pycache__/*" \
+    -exec cp --parents {} "$KB_DIR/" \; 2>/dev/null
 
 echo "✓ Files indexed: $(ls -1 "$KB_DIR" | wc -l)"
 echo "✓ AI will reference your code from now on!"
@@ -364,7 +373,7 @@ MEMORY_DIR="$HOME/.ai-memory/conversations"
 echo "=== YOUR AI'S LEARNING PROGRESS ==="
 echo ""
 
-total=$(find "$MEMORY_DIR" -name "*.jsonl" -exec wc -l {} + 2>/dev/null | tail -1 | awk '{print $1}')
+total=$(find "$MEMORY_DIR" -name "*.jsonl" -print0 2>/dev/null | xargs -0 cat 2>/dev/null | wc -l || echo 0)
 echo "📊 Total exchanges: $total"
 
 days=$(ls -1 "$MEMORY_DIR"/*.jsonl 2>/dev/null | wc -l)
