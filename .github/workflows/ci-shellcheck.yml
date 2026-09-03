@@ -1,0 +1,30 @@
+name: Shell script lint
+
+on:
+  push:
+    paths:
+      - 'Persistent AI Memory - Terminal AI That Learns & Knows You.sh'
+  pull_request:
+    paths:
+      - 'Persistent AI Memory - Terminal AI That Learns & Knows You.sh'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bash syntax check
+        run: |
+          bash -n "./Persistent AI Memory - Terminal AI That Learns & Knows You.sh"
+
+      - name: Install shellcheck and run (fail on any issues)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+          out=$(shellcheck -x "./Persistent AI Memory - Terminal AI That Learns & Knows You.sh" 2>&1 || true)
+          if [ -n "$out" ]; then
+            echo "$out"
+            echo "::error ::Shellcheck found issues"
+            exit 1
+          fi

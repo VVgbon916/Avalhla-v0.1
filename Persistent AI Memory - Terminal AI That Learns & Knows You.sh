@@ -1,5 +1,8 @@
 #!/bin/bash
 ################################################################################
+set -euo pipefail
+IFS=$'\n\t'
+# Strict mode enabled (set -euo pipefail)"
 # CHEATSHEET: Persistent AI Memory - Terminal AI That Learns & Knows You
 # Create a personal AI assistant that remembers conversations and learns over time
 # Your AI recognizes you instantly and builds knowledge about YOUR preferences
@@ -41,10 +44,17 @@ echo "=== HOW AI MEMORY WORKS ==="
 echo "=== SETUP MEMORY SYSTEM ==="
 
 mkdir -p "$HOME/bin"
-if ! grep -q 'export PATH="$HOME/bin:$PATH"' "$HOME/.bashrc" 2>/dev/null; then
-    echo 'export PATH="$HOME/bin:$PATH"' >> "$HOME/.bashrc"
+# Persist PATH for login shells and apply in interactive shells only
+# shellcheck disable=SC2016
+if ! grep -q 'export PATH="$HOME/bin:$PATH"' "$HOME/.profile" 2>/dev/null; then
+    # shellcheck disable=SC2016
+    printf '%s\n' 'export PATH="$HOME/bin:$PATH"' >> "$HOME/.profile"
 fi
-source "$HOME/.bashrc" 2>/dev/null || true
+# Source .bashrc only in interactive shells
+if [[ $- == *i* ]] && [ -f "$HOME/.bashrc" ]; then
+    # shellcheck disable=SC1090,SC1091
+    source "$HOME/.bashrc" 2>/dev/null || true
+fi
 export PATH="$HOME/bin:$PATH"
 
 # Create memory structure
@@ -171,12 +181,12 @@ load_greeting() {
     fi
 
     local last_conv
-    last_conv=$(ls -t "$MEMORY_DIR"/*.jsonl 2>/dev/null | head -1)
+    last_conv=$(find "$MEMORY_DIR" -maxdepth 1 -type f -name "*.jsonl" -printf '%T@ %p\n' 2>/dev/null | sort -nr | head -n1 | cut -d' ' -f2- || true)
     if [ -n "$last_conv" ]; then
         local last_topic
-        last_topic=$(tail -1 "$last_conv" 2>/dev/null | grep -o '"user":"[^"]*"' | head -1 | cut -d'"' -f4)
+        last_topic=$(tail -1 "$last_conv" 2>/dev/null | grep -o '"user":"[^"]*"' | head -1 | cut -d'"' -f4 || true)
         if [ -n "$last_topic" ]; then
-            echo -e "${BLUE}📚 Last topic: ${last_topic:0:50}...${NC}"
+            printf '%b\n' "${BLUE}📚 Last topic: ${last_topic:0:50}...${NC}"
         fi
     fi
 
@@ -190,9 +200,23 @@ save_conversation() {
     local timestamp
     timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-    cat >> "$CURRENT_LOG" << JSONLOG
-{"timestamp":"$timestamp","user":"$user_msg","ai":"$ai_response","model":"$MODEL","learned":false}
-JSONLOG
+    # Ensure current log directory exists
+    mkdir -p "$(dirname "$CURRENT_LOG")"
+
+    # Escape JSON safely (use python3 if available, otherwise fallback to simple escapes)
+    if command -v python3 >/dev/null 2>&1; then
+        local esc_user_msg
+        local esc_ai_response
+        esc_user_msg=$(printf '%s' "$user_msg" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read())[1:-1])')
+        esc_ai_response=$(printf '%s' "$ai_response" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read())[1:-1])')
+    else
+        local esc_user_msg
+        local esc_ai_response
+        esc_user_msg=$(printf '%s' "$user_msg" | sed -e 's/\\/\\\\/g' -e 's/"/\\\"/g' -e ':a;N;$!ba;s/\n/\\n/g')
+        esc_ai_response=$(printf '%s' "$ai_response" | sed -e 's/\\/\\\\/g' -e 's/"/\\\"/g' -e ':a;N;$!ba;s/\n/\\n/g')
+    fi
+
+    printf '%s\n' "{\"timestamp\":\"$timestamp\",\"user\":\"$esc_user_msg\",\"ai\":\"$esc_ai_response\",\"model\":\"$MODEL\",\"learned\":false}" >> "$CURRENT_LOG"
 }
 
 load_context() {
@@ -226,20 +250,62 @@ $user_input"
 
 ensure_ollama() {
     if ! command -v ollama >/dev/null 2>&1; then
-        echo -e "${YELLOW}⚠️ Ollama is not installed or not on PATH.${NC}" >&2
+        printf '%b\n' "${YELLOW}⚠️ Ollama is not installed or not on PATH.${NC}" >&2
         exit 1
     fi
 
-    if ! pgrep -x ollama >/dev/null 2>&1; then
-        echo -e "${YELLOW}🔄 Starting local Ollama service...${NC}" >&2
-        ollama serve >/tmp/ollama-ava.log 2>&1 &
-        sleep 3
+    LOG_DIR="$HOME/.ai-memory/var"
+    mkdir -p "$LOG_DIR"
+    PID_FILE="$LOG_DIR/ollama-ava.pid"
+
+    # Function to check if Ollama server responds to 'ollama list'
+    ollama_responding() {
+        if ollama list >/dev/null 2>&1; then
+            return 0
+        fi
+        return 1
+    }
+
+    # If server not responding, try start with retries
+    if ! ollama_responding; then
+        printf '%b\n' "${YELLOW}🔄 Starting local Ollama service...${NC}" >&2
+        setsid ollama serve >"$LOG_DIR/ollama-ava.log" 2>&1 &
+        echo "$!" > "$PID_FILE" || true
+
+        # Wait for server to become responsive with backoff
+        local tries=0
+        local max_tries=8
+        local delay=1
+        while ! ollama_responding && [ "$tries" -lt "$max_tries" ]; do
+            sleep "$delay"
+            tries=$((tries + 1))
+            delay=$((delay * 2))
+        done
+
+        if ! ollama_responding; then
+            printf '%b\n' "${YELLOW}⚠️ Ollama did not start after retries; continuing but commands may fail.${NC}" >&2
+        fi
     fi
 
+    # Ensure model is available; pull if missing (with a short retry)
     if ! ollama list 2>/dev/null | grep -q "qwen3.5:9b"; then
-        echo -e "${YELLOW}📥 Pulling qwen3.5:9b model...${NC}" >&2
-        ollama pull qwen3.5:9b >/tmp/ollama-pull.log 2>&1 || true
+        printf '%b\n' "${YELLOW}📥 Pulling qwen3.5:9b model...${NC}" >&2
+        for _ in 1 2 3; do
+            ollama pull qwen3.5:9b >"$LOG_DIR/ollama-pull.log" 2>&1 && break || sleep 2
+        done
     fi
+
+    # Trap to clean up server started by this script (reads PID from file)
+    cleanup_ollama() {
+        if [ -f "$PID_FILE" ]; then
+            _p=$(cat "$PID_FILE" 2>/dev/null || true)
+            if [ -n "$_p" ] && kill -0 "$_p" >/dev/null 2>&1; then
+                kill "$_p" || true
+            fi
+            rm -f "$PID_FILE" || true
+        fi
+    }
+    trap cleanup_ollama EXIT
 }
 
 run_model() {
@@ -247,7 +313,12 @@ run_model() {
     local full_prompt response
 
     full_prompt=$(build_full_prompt "$user_input")
-    response=$(ollama run "$MODEL" "$full_prompt" 2>/dev/null)
+    # Use temporary file for prompt to avoid shell escaping issues
+    local prompt_file
+    prompt_file=$(mktemp)
+    printf '%s' "$full_prompt" > "$prompt_file"
+    response=$(ollama run "$MODEL" "$prompt_file" 2>/dev/null || ollama run "$MODEL" "$(cat "$prompt_file")" 2>/dev/null)
+    rm -f "$prompt_file" || true
 
     if [[ -z "${response//[[:space:]]/}" ]]; then
         echo -e "${YELLOW}⚠️ Empty response. Retrying once...${NC}" >&2
@@ -261,7 +332,7 @@ ensure_ollama
 load_greeting
 
 while true; do
-    read -p "$(echo -e ${BLUE}You:${NC}) " prompt
+    read -r -p "$(printf '%b' "${BLUE}You:${NC}") " prompt
 
     case "$prompt" in
         "exit"|"quit")
@@ -335,15 +406,35 @@ echo "📚 Indexing your code..."
 echo "Source: $PROJECT_PATH"
 echo ""
 
-find "$PROJECT_PATH" \
+cd "$PROJECT_PATH" 2>/dev/null || { echo "Invalid project path: $PROJECT_PATH"; exit 1; }
+mkdir -p "$KB_DIR"
+find . \
     -type f \
     \( -name "*.py" -o -name "*.js" -o -name "*.sh" -o -name "*.txt" -o -name "*.md" \) \
-    ! -path "*/node_modules/*" \
-    ! -path "*/.git/*" \
-    ! -path "*/__pycache__/*" \
-    -exec cp {} "$KB_DIR/" \; 2>/dev/null
+    ! -path "./node_modules/*" \
+    ! -path "./.git/*" \
+    ! -path "./__pycache__/*" \
+    -exec cp --parents {} "$KB_DIR/" \; 2>/dev/null || {
+    # cp --parents not available on all platforms; try rsync -aR
+    if command -v rsync >/dev/null 2>&1; then
+        find . -type f \( -name "*.py" -o -name "*.js" -o -name "*.sh" -o -name "*.txt" -o -name "*.md" \) \
+            ! -path "./node_modules/*" ! -path "./.git/*" ! -path "./__pycache__/*" -print0 | \
+            rsync -0 -aR --files-from=- ./ "$KB_DIR/"
+    else
+        # Fallback: copy preserving relative path
+        find . -type f \( -name "*.py" -o -name "*.js" -o -name "*.sh" -o -name "*.txt" -o -name "*.md" \) \
+            ! -path "./node_modules/*" ! -path "./.git/*" ! -path "./__pycache__/*" -print0 | \
+            while IFS= read -r -d '' f; do
+                dest="$KB_DIR/${f#./}"
+                mkdir -p "$(dirname "$dest")"
+                cp "$f" "$dest" || true
+            done
+    fi
+}
 
-echo "✓ Files indexed: $(ls -1 "$KB_DIR" | wc -l)"
+# Count files safely
+files_count=$(find "$KB_DIR" -type f 2>/dev/null | wc -l || echo 0)
+echo "✓ Files indexed: $files_count"
 echo "✓ AI will reference your code from now on!"
 AILEARN
 
@@ -364,7 +455,12 @@ MEMORY_DIR="$HOME/.ai-memory/conversations"
 echo "=== YOUR AI'S LEARNING PROGRESS ==="
 echo ""
 
-total=$(find "$MEMORY_DIR" -name "*.jsonl" -exec wc -l {} + 2>/dev/null | tail -1 | awk '{print $1}')
+# Compute total exchanges robustly
+if find "$MEMORY_DIR" -name "*.jsonl" -print -quit 2>/dev/null | grep -q .; then
+    total=$(find "$MEMORY_DIR" -name "*.jsonl" -print0 2>/dev/null | xargs -0 cat 2>/dev/null | wc -l || echo 0)
+else
+    total=0
+fi
 echo "📊 Total exchanges: $total"
 
 days=$(ls -1 "$MEMORY_DIR"/*.jsonl 2>/dev/null | wc -l)
@@ -400,20 +496,23 @@ echo ""
 
 memory_text=$(
     echo "=== USER PROFILE ==="
-    cat "$HOME/.ai-memory/profiles/user-profile.txt" 2>/dev/null
+    cat "$HOME/.ai-memory/profiles/user-profile.txt" 2>/dev/null || true
     echo ""
     echo "=== RECENT CONVERSATIONS ==="
-    find "$MEMORY_DIR" -name "*.jsonl" -exec grep -h '"user"' {} \; 2>/dev/null | tail -20
+    find "$MEMORY_DIR" -name "*.jsonl" -exec grep -h '"user"' {} \; 2>/dev/null | tail -20 || true
 )
 
-prompt="Based on this conversation history with your user, what have you learned about them?
-$memory_text
+prompt_text="Based on this conversation history with your user, what have you learned about them?\n$memory_text\n\nProvide a concise summary."
 
-Provide a concise summary."
+# Use a prompt file to avoid quoting issues
+prompt_file=$(mktemp)
+printf '%s' "$prompt_text" > "$prompt_file"
 
 echo "AI's understanding of you:"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-ollama run "$MODEL" "$prompt" 2>/dev/null
+# Try running with prompt file first, fallback to inline
+ollama run "$MODEL" "$prompt_file" 2>/dev/null || ollama run "$MODEL" "$(cat "$prompt_file")" 2>/dev/null || true
+rm -f "$prompt_file" || true
 AIREMEMBER
 
 chmod +x "$HOME/bin/ai-remember"
