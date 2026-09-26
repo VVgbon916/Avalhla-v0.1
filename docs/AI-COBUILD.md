@@ -380,3 +380,177 @@ MAKE THE RESULT DECIDE THE STORY.
 
 Dawa > AwA < Avalhla [~]
 \`\`\`
+---
+
+## 15. Search + Trace Protocol ✦
+
+When an unfamiliar symbol, path, command, or variable appears, **search first and classify second**.
+
+The goal is to recover the real execution graph without turning historical text into runtime authority.
+
+### Remote search
+
+Start narrow:
+
+```text
+EXACT SYMBOL
+EXACT COMMAND
+EXACT ERROR
+EXACT PATH
+```
+
+Then inspect surrounding callers and definitions.
+
+For example:
+
+```text
+search: AVA_IMAGINE_ROOT
+search: ava-imagine
+search: ava-mood
+```
+
+Remote search is useful for:
+
+```text
+history
+shared documentation
+old callers
+renamed paths
+surviving implementation
+known design notes
+```
+
+Remote search is **not** proof of current local behavior. Fetch the exact file/ref before relying on it.
+
+### Local trace
+
+Inside the canonical worktree:
+
+```bash
+git --no-pager grep -nE '<symbol>|<command>|<path>' -- ':!memory/**' ':!docs/**'
+
+grep -RnsE '<symbol>|<command>|<path>' \
+  bin scripts Makefile config persona \
+  --exclude-dir=.git \
+  --exclude='*.jsonl'
+
+readlink -f <executable-or-link>
+```
+
+For environment variables:
+
+```bash
+grep -RnsE '(export[[:space:]]+)?<VAR>([[:space:]]*[:+?]?=|$)' \
+  . --exclude-dir=.git --exclude-dir=memory --exclude-dir=docs
+```
+
+Trace four things separately:
+
+```text
+DEFINITION
+    where the symbol is assigned / implemented
+
+CALLERS
+    what actually invokes it
+
+INPUTS
+    environment, files, arguments, generated state
+
+OUTPUTS
+    files, stdout, APIs, model prompts, side effects
+```
+
+### Classify before removal
+
+Every stale-looking reference becomes one of:
+
+```text
+LIVE AUTHORITY
+UNUSED BUT VALID
+DUPLICATE / SHADOW AUTHORITY
+HISTORICAL TRACE
+DEAD CODE
+UNKNOWN
+```
+
+Do not delete because a grep result looks old.
+
+Do not preserve a duplicate authority merely because it still exists.
+
+The evidence chain is:
+
+```text
+SEARCH
+  ->
+FETCH
+  ->
+TRACE DEFINITION
+  ->
+TRACE CALLERS
+  ->
+TRACE INPUT/OUTPUT
+  ->
+CLASSIFY
+  ->
+BEHAVIOR TEST
+  ->
+ONLY THEN CHANGE
+```
+
+### Example: AVA_IMAGINE_ROOT
+
+The discovered pattern was:
+
+```text
+scripts/ava-imagine
+    ROOT="${AVA_IMAGINE_ROOT:-$AVA_ROOT/imagination}"
+
+scripts/ava-mood
+    IMAGINE_HUMAN="${AVA_IMAGINE_ROOT:-$HOME/Avalhla/imagination}/HUMAN"
+
+bin/ava-imagine -> scripts/ava-imagine
+bin/ava-mood    -> scripts/ava-mood
+```
+
+That means the symbol is not a random documentation trace: it is present in executable code and therefore requires architectural classification before removal.
+
+The next question is not:
+
+```text
+"Can we delete this?"
+```
+
+It is:
+
+```text
+"Which path should own imagination state,
+and is AVA_IMAGINE_ROOT an intentional override,
+a duplicate path authority,
+or legacy compatibility?"
+```
+
+Only the local execution graph plus behavior can answer that.
+
+### Low-trace co-build record
+
+For future AIs, preserve the useful result, not the whole investigation:
+
+```text
+SEARCHED
+    symbol / path / command
+
+FOUND
+    definitions + callers
+
+CLASS
+    live / duplicate / historical / dead / unknown
+
+EVIDENCE
+    exact command + result
+
+NEXT
+    single verified action
+```
+
+This is the preferred durable trace for the Avalhla co-build.
+
