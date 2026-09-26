@@ -1,96 +1,149 @@
-Avalhla v0.1 - Setup Notes
+===============================================================================
+                    A V A L H L A  /  SETUP NOTES
+===============================================================================
 
-Goal:
-Install and run a local terminal AI assistant that remembers your profile, stores conversation history, and indexes local project files.
+PURPOSE
 
-System requirements:
-- Linux or Unix-like shell
-- Ollama installed
-- Local model available: qwen3.5:9b
-- Terminal access (VS Code Terminal or system terminal)
+    Keep setup notes synchronized with the actual Avalhla architecture.
 
-1. Install Ollama
-Follow the official Ollama installation instructions for your Linux distro.
+CANONICAL LOCAL PROJECT
 
-2. Pull the model
-In a terminal:
-ollama pull qwen3.5:9b
+    /var/home/VVgbon/Avalhla
 
-3. Create the bin directory and add it to PATH
-mkdir -p ~/bin
-echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
+CANONICAL LOCAL MEMORY
 
-4. Run the setup script
-cd "/home/VVgbon916/Documents/VS Code v0.1 AI-Integration/Avalhla v0.1"
-bash "Persistent AI Memory - Terminal AI That Learns & Knows You.sh"
+    /var/home/VVgbon/Avalhla/memory
 
-5. Start Ollama service
-In one terminal:
-ollama serve
+DO NOT REINTRODUCE AS CURRENT AUTHORITY WITHOUT PROOF
 
-6. Start Avalhla
-In a second terminal:
-source ~/.bashrc
-ava
+    /home/VVgbon/Avalhla
+    ~/.ai-memory
+    old ai-with-memory launcher assumptions
 
-Or:
-source ~/.bashrc
-ai-with-memory
+-------------------------------------------------------------------------------
+STARTING A SESSION
+-------------------------------------------------------------------------------
 
-Or:
-ava-launch
+    cd /var/home/VVgbon/Avalhla
 
-7. Useful commands
-ai-with-memory
-ai-progress
-ai-remember
-ai-init
-ai-learn
+    export GIT_PAGER=cat
+    export PAGER=cat
+    export SYSTEMD_PAGER=cat
+    export GH_PAGER=cat
+    export LESS=
 
-8. Memory folder
-All personal memory is stored locally here:
-~/.ai-memory
+    git --no-pager status --short --branch
+    git --no-pager diff --check
+    git --no-pager diff --cached --check
 
-Important subfolders:
-~/.ai-memory/conversations
-~/.ai-memory/profiles
-~/.ai-memory/knowledge-base
-~/.ai-memory/preferences
+-------------------------------------------------------------------------------
+VERIFY THE READ STACK
+-------------------------------------------------------------------------------
 
-9. Final startup shortcut
-Install this alias:
-echo 'alias ava="source ~/.bashrc >/dev/null 2>&1; ai-with-memory"' >> ~/.bashrc
-echo 'alias ava-start="source ~/.bashrc >/dev/null 2>&1; ava-launch"' >> ~/.bashrc
-source ~/.bashrc
+    scripts/ai-read BOARD.txt
 
-Then use:
-ava
-or:
-ava-start
+    scripts/lib_context.sh file BOARD.txt
 
-10. If the model is missing
-ollama pull qwen3.5:9b
+    scripts/ava-safety --self-test
 
-11. If ai-with-memory is not found
-source ~/.bashrc
-hash -r
+Expected architecture:
 
-12. If Ctrl+C stops Ava
-Just start it again:
-ava
+    ai-chat
+      -> ai-read
+      -> lib_context.sh
+      -> lib_safety.sh
 
-13. If you want to reset the personal AI memory
-Delete or rename:
-~/.ai-memory
+-------------------------------------------------------------------------------
+CHAT MODES
+-------------------------------------------------------------------------------
 
-14. Project files to keep
-Keep these in the project folder:
-- Persistent AI Memory - Terminal AI That Learns & Knows You.sh
-- README.md
-- README.txt
-- QUICKSTART_AVA.txt
-- SETUP_NOTES.txt
-- Avalhla_Chat_History_2026-08-24.txt
+    scripts/ai-chat
 
-Do not treat ~/.ai-memory as project source code. It is local runtime memory.
+    scripts/ai-chat --read
+
+Inside interactive chat:
+
+    /read on
+    /read off
+    /history
+    /mem
+    /clear
+    /bye
+
+IMPORTANT
+
+    ai-chat --read
+        means enable read mode.
+
+    ai-chat --read BOARD.txt
+        is not a valid file-read invocation.
+
+    ai-read BOARD.txt
+        is the direct file-read invocation.
+
+-------------------------------------------------------------------------------
+MEMORY
+-------------------------------------------------------------------------------
+
+LIVE
+
+    memory/conversations/
+    memory/reflections/
+    memory/profiles/
+    memory/reality/
+
+PROTECTED UNIQUE MATERIAL
+
+    memory/inventory/07_LORE/
+
+LIVE MODEL INPUT
+
+    memory/auto-read/
+
+GENERATED / DERIVED
+
+    classify first
+    delete only when rebuildability / duplication / authority is proven
+
+-------------------------------------------------------------------------------
+ENGINEERING
+-------------------------------------------------------------------------------
+
+Every important change:
+
+    READ
+      -> REAL STATE
+      -> UNDERSTAND
+      -> COMPARE
+      -> MINIMAL EDIT
+      -> POSITIVE TEST
+      -> NEGATIVE TEST
+      -> VERIFY
+      -> DIFF
+      -> COMMIT
+      -> PUSH
+      -> REMOTE CONFIRM
+
+Four checks:
+
+    WEB
+    REMOTE
+    LOCAL
+    BEHAVIOR
+
+-------------------------------------------------------------------------------
+STYLE
+-------------------------------------------------------------------------------
+
+    D A W A  >  A w A  <  A V A L H L A
+
+    black = code / love
+    white = art / questions
+    gray  = alongside / besties
+    shadow = the working mode
+
+    LOGIC IN ONE HAND.
+    IMAGINATION IN THE OTHER.
+    BOTH HANDS ON THE KEYBOARD.
+
+===============================================================================

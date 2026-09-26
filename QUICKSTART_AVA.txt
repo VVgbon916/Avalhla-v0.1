@@ -1,66 +1,104 @@
-AVA QUICKSTART
+===============================================================================
+                         A V A L H L A
+                         QUICKSTART
+===============================================================================
 
-1) Start the Ollama service in one terminal:
-ollama serve
+0 / VERIFY WHERE YOU ARE
 
-2) Open a second terminal and load your shell config:
-source ~/.bashrc
+    cd /var/home/VVgbon/Avalhla
+    pwd
+    git --no-pager status --short --branch
 
-3) Make sure the model exists:
-ollama pull qwen3.5:9b
+1 / NO-PAGER SESSION
 
-4) Start Avalhla:
-ava
+    export GIT_PAGER=cat
+    export PAGER=cat
+    export SYSTEMD_PAGER=cat
+    export GH_PAGER=cat
+    export LESS=
 
-If the alias is not available yet, run:
-source ~/.bashrc
-hash -r
-ava
+2 / READ THE PROJECT CONTRACT
 
-4) If you want to start it with the setup check included:
-ava-start
+    less is optional for humans
+    AI inspection should prefer:
 
-5) If you want to run the full setup script again:
-cd "/home/VVgbon916/Documents/VS Code v0.1 AI-Integration/Avalhla v0.1"
-bash "Persistent AI Memory - Terminal AI That Learns & Knows You.sh"
+    git --no-pager status --short
+    git --no-pager diff --check
 
-6) After setup, use these commands:
-ai-with-memory
-ai-progress
-ai-remember
-ai-init
-ai-learn
+    Main contract:
 
-7) Memory locations:
-~/.ai-memory/conversations
-~/.ai-memory/profiles
-~/.ai-memory/knowledge-base
-~/.ai-memory/preferences
+    docs/04-AI-AVALHLA-ENGINEERING-CONTRACT.md
 
-8) If Ctrl+C stops Ava:
-ava
+3 / READ THE ACTUAL COMMAND CONTRACT
 
-9) If ai-with-memory is not found:
-source ~/.bashrc
-hash -r
+    scripts/ai-chat --help
+    scripts/ai-read
+    scripts/ai-read BOARD.txt
 
-10) If you want to recover from a broken PATH:
-mkdir -p ~/bin
-echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
+    Context dispatcher:
 
-11) Final launch command:
-source ~/.bashrc && ollama pull qwen3.5:9b >/dev/null 2>&1 || true && ai-with-memory
+    scripts/lib_context.sh file BOARD.txt
+    scripts/lib_context.sh ls memory/auto-read
+    scripts/lib_context.sh tree memory/auto-read
+    scripts/lib_context.sh grep BOARD memory
 
-SKILLS / USES
-- Terminal AI assistant
-- Persistent memory and conversation logging
-- Local custom profile system
-- Knowledge base indexing for project files
-- Friendly, personal assistant experience
-- Good for coding help, terminal workflows, and long-term learning
+4 / SAFETY
 
-NOTES
-- Avalhla is designed for terminal-first interaction.
-- Memory is stored locally on your machine.
-- The assistant learns from your chats and project files over time.
+    scripts/ava-safety --self-test
+
+5 / CHAT
+
+    scripts/ai-chat
+    scripts/ai-chat --read
+
+    Inside chat:
+
+    /read on
+    /read off
+    /history
+    /mem
+    /clear
+    /bye
+
+6 / BEFORE ANY ARCHITECTURE CHANGE
+
+    WEB
+    REMOTE
+    LOCAL
+    BEHAVIOR
+
+    then:
+
+    git --no-pager diff --check
+    git --no-pager diff --cached --check
+
+7 / MEMORY RULE
+
+    memory/auto-read/* = LIVE MODEL INPUT
+
+    Treat every auto-read file as runtime input.
+
+8 / PROTECTED WORLD
+
+    Do not casually rewrite:
+
+    persona/avalhla.Modelfile
+    AwA_ATLAS.md
+    AwA_WEAVE.md
+    AwA_DREAM.md
+    AwA_TERMINAL.md
+    memory/conversations/
+    memory/reflections/
+    memory/profiles/
+    memory/reality/
+    memory/inventory/07_LORE/
+
+9 / IMPORTANT
+
+    terminal closed != PASS
+
+    A test is PASS only when its actual output proves PASS.
+
+===============================================================================
+Dawa > AwA < Avalhla [~]
+===============================================================================

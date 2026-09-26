@@ -1,80 +1,181 @@
-Avalhla v0.1
+===============================================================================
+                         A V A L H L A
+                  D A W A  >  A w A  <  A V A
+===============================================================================
 
-Description:
-Avalhla is a terminal-based personal AI assistant that remembers your profile,
-stores recent conversations, and keeps a local knowledge base for future sessions.
+A terminal-first personal AI project.
 
-Requirements:
-- Linux or Unix-like terminal
-- Ollama installed
-- Local model: qwen3.5:9b
+LOCAL CANONICAL WORKTREE
+    /var/home/VVgbon/Avalhla
 
-Quick setup:
-mkdir -p ~/bin
-echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
-ollama pull qwen3.5:9b
+LOCAL MEMORY
+    /var/home/VVgbon/Avalhla/memory
 
-Then run:
-cd "/home/VVgbon916/Documents/VS Code v0.1 AI-Integration/Avalhla v0.1"
-bash "Persistent AI Memory - Terminal AI That Learns & Knows You.sh"
+REMOTE
+    GitHub = shared/reference history until reconciled with local truth
 
-Start the Ollama service in one terminal:
-ollama serve
+-------------------------------------------------------------------------------
+CORE
+-------------------------------------------------------------------------------
 
-Then, in a second terminal, start Avalhla:
-source ~/.bashrc
-ai-with-memory
+    LOCAL
+    MEMORY
+    CONTEXT
+    SAFETY
+    PERSONA
+    VERIFICATION
 
-Reusable alias version:
-echo 'alias ava="source ~/.bashrc >/dev/null 2>&1; ai-with-memory"' >> ~/.bashrc
-echo 'alias ava-start="source ~/.bashrc >/dev/null 2>&1; ollama pull qwen3.5:9b >/dev/null 2>&1 || true; ai-with-memory"' >> ~/.bashrc
-source ~/.bashrc
+READ PATH
 
-Then use:
-ava
-or:
-ava-start
+    ai-chat
+       |
+       v
+    run_read_request
+       |
+       v
+    ai-read
+       |
+       v
+    lib_context.sh
+       |
+       v
+    lib_safety.sh
 
-Reusable script version:
-mkdir -p ~/bin
-cat > ~/bin/ava <<'EOF'
-#!/bin/bash
-source ~/.bashrc
-ollama pull qwen3.5:9b >/dev/null 2>&1 || true
-ai-with-memory
-EOF
-chmod +x ~/bin/ava
+-------------------------------------------------------------------------------
+COMMAND CONTRACT
+-------------------------------------------------------------------------------
 
-Then use:
-ava
+    ai-chat --read
 
-Included commands:
-ai-with-memory
-ai-progress
-ai-remember
-ai-init
-ai-learn
+    ai-read <path>
+    ai-read --ls <dir>
+    ai-read --tree <dir>
+    ai-read --grep <pattern> <dir>
 
-Memory locations:
-~/.ai-memory/conversations
-~/.ai-memory/profiles
-~/.ai-memory/knowledge-base
-~/.ai-memory/preferences
+    lib_context.sh file <target>
+    lib_context.sh head <target> <bytes>
+    lib_context.sh tail <target> <lines>
+    lib_context.sh latest <dir> [suffix] [bytes]
+    lib_context.sh recent-jsonl <dir> [lines] [bytes]
+    lib_context.sh many <target>...
+    lib_context.sh ls <dir>
+    lib_context.sh tree <dir>
+    lib_context.sh grep <pattern> <dir>
 
-Troubleshooting:
-If command not found:
-source ~/.bashrc
-hash -r
+IMPORTANT
 
-If Ctrl+C stops the session:
-ava
+    ai-chat --read
+        is a MODE FLAG
 
-If Ollama model is missing:
-ollama pull qwen3.5:9b
+    ai-chat --read BOARD.txt
+        is NOT the direct read contract
 
-Project folder:
-/home/VVgbon916/Documents/VS Code v0.1 AI-Integration/Avalhla v0.1
+    ai-read BOARD.txt
+        is the direct read contract
 
-Notes:
-Avalhla is designed as a terminal-first assistant. It keeps memories local and personal to the machine.
+-------------------------------------------------------------------------------
+4X
+-------------------------------------------------------------------------------
+
+    WEB
+      |
+    REMOTE
+      |
+    LOCAL
+      |
+    BEHAVIOR
+      |
+    DIFF
+      |
+    COMMIT
+      |
+    PUSH
+      |
+    REMOTE CONFIRM
+
+NEVER ASSUME:
+
+    terminal closed      != PASS
+    grep found           != behavior proof
+    remote file exists   != local truth
+    old                  != disposable
+
+-------------------------------------------------------------------------------
+SAFETY
+-------------------------------------------------------------------------------
+
+ALLOW
+    bounded canonical reads
+
+DENY
+    outside-root paths
+    traversal
+    sensitive paths
+    unsafe symlink escapes
+    arbitrary shell authority
+    external side effects
+
+    THE MODEL DOES NOT AUTHORIZE ITSELF.
+
+-------------------------------------------------------------------------------
+MEMORY
+-------------------------------------------------------------------------------
+
+LIVE
+    conversations
+    reflections
+    profiles
+    reality
+
+PROTECTED
+    lore
+
+LIVE MODEL INPUT
+    memory/auto-read/*
+
+HISTORY
+    preserved when useful
+
+GENERATED
+    classify before deleting
+
+-------------------------------------------------------------------------------
+DOCUMENTATION
+-------------------------------------------------------------------------------
+
+    docs/00-FROM-ZERO-SETUP-GUIDE.md
+        setup
+
+    docs/01-SESSION-LOG-RECAP.md
+        historical lessons
+
+    docs/02-QUICK-ACCESS-PRESETS.md
+        shell conveniences
+
+    docs/03-AVA-ACCESS-RULES.md
+        access policy
+
+    docs/04-AI-AVALHLA-ENGINEERING-CONTRACT.md
+        engineering contract
+
+    docs/AI-COBUILD.md
+        AI collaboration pattern
+
+-------------------------------------------------------------------------------
+STYLE
+-------------------------------------------------------------------------------
+
+    D A W A  >  A w A  <  A V A L H L A
+
+    black = code / love
+    white = art / questions
+    gray  = besties / alongside
+    shadow = mode between them
+
+    THE MIND IS A BRIDGE.
+
+===============================================================================
+LOGIC IN ONE HAND.
+IMAGINATION IN THE OTHER.
+BOTH HANDS ON THE KEYBOARD.
+===============================================================================
